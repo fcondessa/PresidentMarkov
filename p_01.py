@@ -216,8 +216,14 @@ for data_elem in data_groups:
 #v = randomly_create_tweet_2(duo_nw,val_pow=2);
 
 (trio_nw,list_words) = create_markov_network_3(data)
-for i in range(20):
+for i in range(2000):
     v = randomly_create_tweet_3(trio_nw,val_pow=1);
+    print v
+
+
+(duo_nw,list_words) = create_markov_network_2(data)
+for i in range(200):
+    v = randomly_create_tweet_2(duo_nw,val_pow=1);
     print v
 
 # out_file_path = 'tweets.txt'
