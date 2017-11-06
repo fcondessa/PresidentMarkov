@@ -3,7 +3,7 @@ import networkx as nx
 from collections import defaultdict
 from random import random
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import pandas as pd
 
 data_path = 'data/input_data.json'
@@ -214,17 +214,13 @@ for data_elem in data_groups:
 #(duo_nw,list_words) = create_markov_network_2(data)
 
 #v = randomly_create_tweet_2(duo_nw,val_pow=2);
+#
+# (trio_nw,list_words) = create_markov_network_3(data)
+# for i in range(2000):
+#     v = randomly_create_tweet_3(trio_nw,val_pow=1);
+#     print v
 
-(trio_nw,list_words) = create_markov_network_3(data)
-for i in range(2000):
-    v = randomly_create_tweet_3(trio_nw,val_pow=1);
-    print v
 
-
-(duo_nw,list_words) = create_markov_network_2(data)
-for i in range(200):
-    v = randomly_create_tweet_2(duo_nw,val_pow=1);
-    print v
 
 # out_file_path = 'tweets.txt'
 # with open(out_file_path,'wb') as f:
@@ -233,3 +229,185 @@ for i in range(200):
 #             print iter_i
 #         v = randomly_create_tweet_2(duo_nw,val_pow=2);
 #         f.write('-'+v.encode('utf8')+'\n')
+
+
+def create_markov_network_2_2_way(test_data = data,start_word=start_word,stop_word=stop_word):
+    markov_network = defaultdict(lambda: defaultdict(int))
+    markov_network_rev_1 = defaultdict(lambda: defaultdict(int))
+    markov_network_rev_2 = defaultdict(lambda: defaultdict(int))
+    set_words = [start_word,stop_word]
+    for datum in test_data:
+        try:
+            list_words = datum['text'].split()
+            list_words = [elem.lower() for elem in list_words]
+            for elem in list_words:
+                set_words.append(elem)
+            rax = list_words
+            aux = [((start_word,start_word),rax[0]),((start_word,rax[0]),rax[1])]
+            aux += [((rax[i], rax[i + 1]), rax[i + 2]) for i in range(len(rax) - 2)]
+            aux += [((rax[-2],rax[-1]),stop_word),((rax[-1],stop_word),stop_word)]
+            for trio in aux:
+                markov_network[trio[0]][trio[1]] +=1
+                markov_network_rev_1[trio[1]][trio[0]] += 1
+                markov_network_rev_2[(trio[1],trio[0][1])][trio[0][0]] +=1
+        except IndexError:
+            pass
+    return markov_network,markov_network_rev_1,markov_network_rev_2,list(set_words)
+
+(duo_nw,duo_nw_rev_1,duo_nw_rev_2,list_words) = create_markov_network_2_2_way(data)
+for i in range(200):
+    v = randomly_create_tweet_2(duo_nw,val_pow=1);
+    print v
+
+target_word = 'sad'
+val_pow = 1
+
+def create_target_tweet(target_word,duo_nw_rev_1=duo_nw_rev_1,duo_nw_rev_2=duo_nw_rev_2,duo_nw=duo_nw,val_pow=1,start_word=start_word,stop_word=stop_word):
+    word_list = [target_word]
+    list_prev_words = duo_nw_rev_1[target_word].keys()
+    val = duo_nw_rev_1[target_word].values()
+    val = np.array([elem for elem in val])
+    val = val / (1.0 * val.sum())
+    val = val ** val_pow
+    g = random()
+    idx = np.where(val >= g)[0][0]
+    prev_word = list_prev_words[idx][1]
+    word_list = [prev_word] + word_list
+    while prev_word != start_word:
+        res_lookup = duo_nw_rev_2[(word_list[1],word_list[0])]
+        list_prev_words = res_lookup.keys()
+        val = res_lookup.values()
+        val = np.array([elem for elem in val])
+        val = val/(1.0*val.sum())
+        val = val ** val_pow
+        val = np.cumsum(val) / (1.0 * np.sum(val))
+        print val
+        g = random()
+        idx = np.where(val >= g)[0][0]
+        prev_word = list_prev_words[idx]
+        word_list = [prev_word] + word_list
+    next_word = word_list[-1]
+    while next_word!= stop_word:
+        res_lookup = duo_nw[(word_list[-2],word_list[-1])]
+        list_next_words = res_lookup.keys()
+        val = res_lookup.values()
+        #val = [1.0*elem ** val_pow for elem in val]
+        val = np.array([elem for elem in val])
+        val = val / (1.0 * val.sum())
+        val = val ** val_pow
+        print val
+        val = np.cumsum(val) / (1.0 * np.sum(val))
+        g = random()
+        idx = np.where(val >= g)[0][0]
+        next_word = list_next_words[idx]
+        word_list = word_list + [next_word]
+    out = ' '.join(word_list[1:-1]).replace('&amp;','&')
+    return out
+
+
+word_list = [target_word]
+list_prev_words = duo_nw_rev_1[target_word].keys()
+val = duo_nw_rev_1[target_word].values()
+val = np.array([elem for elem in val])
+val = val / (1.0 * val.sum())
+val = val ** val_pow
+g = random()
+idx = np.where(val >= g)[0][0]
+prev_word = list_prev_words[idx][1]
+word_list = [prev_word] + word_list
+while prev_word != start_word:
+    res_lookup = duo_nw_rev_2[(word_list[1],word_list[0])]
+    list_prev_words = res_lookup.keys()
+    val = res_lookup.values()
+    val = np.array([elem for elem in val])
+    val = val/(1.0*val.sum())
+    val = val ** val_pow
+    val = np.cumsum(val) / (1.0 * np.sum(val))
+    print val
+    g = random()
+    idx = np.where(val >= g)[0][0]
+    prev_word = list_prev_words[idx]
+    word_list = [prev_word] + word_list
+next_word = word_list[-1]
+while next_word!= stop_word:
+    res_lookup = duo_nw[(word_list[-2],word_list[-1])]
+    list_next_words = res_lookup.keys()
+    val = res_lookup.values()
+    #val = [1.0*elem ** val_pow for elem in val]
+    val = np.array([elem for elem in val])
+    val = val / (1.0 * val.sum())
+    val = val ** val_pow
+    print val
+    val = np.cumsum(val) / (1.0 * np.sum(val))
+    g = random()
+    idx = np.where(val >= g)[0][0]
+    next_word = list_next_words[idx]
+    word_list = word_list + [next_word]
+out = ' '.join(word_list[1:-1]).replace('&amp;','&')
+#
+# word_list = [target_word]
+# list_prev_words = duo_nw_rev_1[(target_word)].keys()
+# val = duo_nw_rev_1[(target_word)].values()
+# val = np.array([elem for elem in val])
+# val = val / (1.0 * val.sum())
+# val = val ** val_pow
+# g = random()
+# idx = np.where(val >= g)[0][0]
+# prev_word = list_prev_words[idx][1]
+# word_list = [prev_word] + word_list
+# while prev_word != start_word:
+#     res_lookup = duo_nw_rev_2[(word_list[1],word_list[0])]
+#     list_prev_words = res_lookup.keys()
+#     val = res_lookup.values()
+#     val = np.array([elem for elem in val])
+#     val = val/(1.0*val.sum())
+#     val = val ** val_pow
+#     val = np.cumsum(val) / (1.0 * np.sum(val))
+#     print val
+#     g = random()
+#     idx = np.where(val >= g)[0][0]
+#     prev_word = list_prev_words[idx]
+#     word_list = [prev_word] + word_list
+# next_word = word_list[-1]
+# while next_word!= stop_word:
+#     res_lookup = duo_nw[(word_list[-2],word_list[-1])]
+#     list_next_words = res_lookup.keys()
+#     val = res_lookup.values()
+#     #val = [1.0*elem ** val_pow for elem in val]
+#     val = np.array([elem for elem in val])
+#     val = val / (1.0 * val.sum())
+#     val = val ** val_pow
+#     print val
+#     val = np.cumsum(val) / (1.0 * np.sum(val))
+#     g = random()
+#     idx = np.where(val >= g)[0][0]
+#     next_word = list_next_words[idx]
+#     word_list = word_list + [next_word]
+# out = ' '.join(word_list[1:-1]).replace('&amp;','&')
+
+### Things trump wonders
+
+markov_network,list_words = create_markov_network(data)
+
+
+from collections import Counter
+import matplotlib.pyplot as plt
+#words = 'wonder'
+words = 'failing'
+list_things = Counter(markov_network[words])
+nodes = list_things.most_common(10)
+the_network= nx.DiGraph()
+the_network.add_node(words)
+for elem in nodes:
+    the_network.add_node(elem[0])
+    the_network.add_edge(words,elem[0],weigh=elem[1])
+    for elemi in Counter(duo_nw[(words,elem[0])]).most_common(5):
+        the_network.add_node(elemi[0])
+        the_network.add_edge(elem[0],elemi[0], weigh=elemi[1])
+
+#pos = nx.shell_layout(the_network)
+#pos = nx.spectral_layout(the_network)
+#pos = nx.spring_layout(the_network,scale=100)
+pos = nx.shell_layout(the_network,scale=100)
+nx.draw_networkx(the_network,pos=pos)
+#nx.draw(the_network)
